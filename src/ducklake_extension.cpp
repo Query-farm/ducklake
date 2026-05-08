@@ -10,6 +10,7 @@
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/storage/storage_extension.hpp"
 #include "storage/ducklake_log_type.hpp"
+#include "storage/ducklake_metadata_cache_log_type.hpp"
 
 namespace duckdb {
 
@@ -20,6 +21,7 @@ static void LoadInternal(ExtensionLoader &loader) {
 
 	auto &instance = loader.GetDatabaseInstance();
 	instance.GetLogManager().RegisterLogType(make_uniq<DuckLakeMetadataLogType>());
+	instance.GetLogManager().RegisterLogType(make_uniq<DuckLakeMetadataCacheLogType>());
 
 	auto &config = DBConfig::GetConfig(instance);
 	StorageExtension::Register(config, "ducklake", make_shared_ptr<DuckLakeStorageExtension>());

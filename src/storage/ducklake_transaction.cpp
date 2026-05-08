@@ -2674,12 +2674,14 @@ void DuckLakeTransaction::DeleteSnapshots(const vector<DuckLakeSnapshotInfo> &sn
 void DuckLakeTransaction::DeleteInlinedData(const DuckLakeInlinedTableInfo &inlined_table) {
 	auto &metadata_manager = GetMetadataManager();
 	metadata_manager.DeleteInlinedData(inlined_table);
+	ducklake_catalog.GetMetadataCache().InvalidateInlinedDataForTable(inlined_table.table_name);
 }
 
 void DuckLakeTransaction::DeleteFlushedInlinedData(const DuckLakeInlinedTableInfo &inlined_table,
                                                    idx_t flush_snapshot_id) {
 	auto &metadata_manager = GetMetadataManager();
 	metadata_manager.DeleteFlushedInlinedData(inlined_table, flush_snapshot_id);
+	ducklake_catalog.GetMetadataCache().InvalidateInlinedDataForTable(inlined_table.table_name);
 }
 
 void DuckLakeTransaction::MarkInlinedDataForDeletion(DuckLakeInlinedTableInfo inlined_table, idx_t flush_snapshot_id) {

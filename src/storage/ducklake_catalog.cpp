@@ -5,6 +5,7 @@
 #include "duckdb/catalog/catalog_entry/schema_catalog_entry.hpp"
 #include "duckdb/catalog/catalog_entry/table_catalog_entry.hpp"
 #include "duckdb/main/attached_database.hpp"
+#include "duckdb/main/database.hpp"
 #include "duckdb/parser/constraints/not_null_constraint.hpp"
 #include "duckdb/parser/parsed_data/create_schema_info.hpp"
 #include "duckdb/parser/parsed_data/create_table_info.hpp"
@@ -61,7 +62,9 @@ void DuckLakeSchemaPinState::Pin(shared_ptr<DuckLakeSchemaCacheEntry> entry) {
 
 DuckLakeCatalog::DuckLakeCatalog(AttachedDatabase &db_p, DuckLakeOptions options_p)
     : Catalog(db_p), options(std::move(options_p)), last_uncommitted_catalog_version(TRANSACTION_ID_START),
-      instance_id(UUID::ToString(UUID::GenerateRandomUUID())) {
+      instance_id(UUID::ToString(UUID::GenerateRandomUUID())),
+      metadata_cache(/*schema_version_max_entries=*/16384, /*inlined_data_max_bytes=*/1ULL << 26) {
+	metadata_cache.EnableLogging(db_p.GetDatabase(), GetName());
 	// figure out the metadata server type
 	auto entry = options.metadata_parameters.find("type");
 	if (entry != options.metadata_parameters.end()) {
@@ -215,8 +218,10 @@ idx_t DuckLakeCatalog::GetBeginSnapshotForTable(TableIndex table_id, DuckLakeTra
 
 idx_t DuckLakeCatalog::GetBeginSnapshotForSchemaVersion(TableIndex table_id, idx_t schema_version,
                                                         DuckLakeTransaction &transaction) {
-	auto &metadata_manager = transaction.GetMetadataManager();
-	return metadata_manager.GetBeginSnapshotForSchemaVersion(table_id, schema_version);
+	return metadata_cache.GetOrLoadSchemaVersion(table_id, schema_version, [&] {
+		auto &metadata_manager = transaction.GetMetadataManager();
+		return metadata_manager.GetBeginSnapshotForSchemaVersion(table_id, schema_version);
+	});
 }
 
 shared_ptr<DuckLakeSchemaCacheEntry> DuckLakeCatalog::GetSchemaCacheEntry(DuckLakeTransaction &transaction,

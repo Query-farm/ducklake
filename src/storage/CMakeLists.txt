@@ -15,6 +15,8 @@ add_library(
   ducklake_schema_entry.cpp
   ducklake_transaction_manager.cpp
   ducklake_catalog_set.cpp
+  ducklake_metadata_cache.cpp
+  ducklake_metadata_cache_log_type.cpp
   ducklake_metadata_manager.cpp
   ducklake_multi_file_list.cpp
   ducklake_storage.cpp

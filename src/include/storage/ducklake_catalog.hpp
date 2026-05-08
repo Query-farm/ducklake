@@ -15,6 +15,7 @@
 #include "duckdb/main/client_context_state.hpp"
 #include "duckdb/storage/object_cache.hpp"
 #include "storage/ducklake_catalog_set.hpp"
+#include "storage/ducklake_metadata_cache.hpp"
 #include "storage/ducklake_partition_data.hpp"
 #include "storage/ducklake_stats.hpp"
 
@@ -250,6 +251,11 @@ public:
 	//! Cache the result of an inlined deletion table existence check
 	void CacheInlinedDeletionTableResult(TableIndex table_id, DuckLakeSnapshot snapshot, bool exists);
 
+	//! Pull-through cache for catalog metadata reads (Query 3 / Query 4).
+	DuckLakeMetadataCache &GetMetadataCache() {
+		return metadata_cache;
+	}
+
 private:
 	void DropSchema(ClientContext &context, DropInfo &info) override;
 	unique_ptr<DuckLakeCatalogSet> LoadSchemaForSnapshot(DuckLakeTransaction &transaction, DuckLakeSnapshot snapshot);
@@ -301,6 +307,8 @@ private:
 	optional_idx last_committed_snapshot;
 	//! Optional callback for instrumenting metadata queries
 	QueryCallback query_callback;
+	//! Pull-through metadata cache (Query 3 schema versions, Query 4 inlined data).
+	DuckLakeMetadataCache metadata_cache;
 };
 
 } // namespace duckdb
