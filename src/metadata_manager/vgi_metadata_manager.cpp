@@ -19,8 +19,22 @@ bool VgiMetadataManager::TypeIsNativelySupported(const LogicalType &type) {
 	// so FLOAT/DOUBLE must be stored as VARCHAR to preserve NaN through the round-trip
 	case LogicalTypeId::FLOAT:
 	case LogicalTypeId::DOUBLE:
-	case LogicalTypeId::TIMESTAMP_TZ:
 	case LogicalTypeId::VARIANT:
+	// SQLite has no first-class temporal types — declaring a column as
+	// DATE/TIME/TIMESTAMP gives it NUMERIC affinity, and CAST(string AS
+	// TIMESTAMP) parses the leading digits and returns a number (e.g.
+	// 'CAST('2024-01-01 09:00:00' AS TIMESTAMP)' → 2024). Force these to
+	// be stored as VARCHAR text so the original string value round-trips
+	// through the DO unchanged; the worker re-parses on read.
+	case LogicalTypeId::DATE:
+	case LogicalTypeId::TIME:
+	case LogicalTypeId::TIME_NS:
+	case LogicalTypeId::TIME_TZ:
+	case LogicalTypeId::TIMESTAMP:
+	case LogicalTypeId::TIMESTAMP_SEC:
+	case LogicalTypeId::TIMESTAMP_MS:
+	case LogicalTypeId::TIMESTAMP_NS:
+	case LogicalTypeId::TIMESTAMP_TZ:
 		return false;
 	default:
 		return true;
@@ -39,6 +53,18 @@ string VgiMetadataManager::GetColumnTypeInternal(const LogicalType &column_type)
 	case LogicalTypeId::FLOAT:
 	case LogicalTypeId::DOUBLE:
 	case LogicalTypeId::VARIANT:
+	// Same reason as TypeIsNativelySupported above: declare temporal
+	// columns with VARCHAR (TEXT affinity) in the DO's SQLite so values
+	// round-trip as strings and don't get NUMERIC-coerced by `CAST(...)`.
+	case LogicalTypeId::DATE:
+	case LogicalTypeId::TIME:
+	case LogicalTypeId::TIME_NS:
+	case LogicalTypeId::TIME_TZ:
+	case LogicalTypeId::TIMESTAMP:
+	case LogicalTypeId::TIMESTAMP_SEC:
+	case LogicalTypeId::TIMESTAMP_MS:
+	case LogicalTypeId::TIMESTAMP_NS:
+	case LogicalTypeId::TIMESTAMP_TZ:
 		return "VARCHAR";
 	default:
 		return column_type.ToString();
